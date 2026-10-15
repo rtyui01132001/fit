@@ -1,0 +1,51 @@
+const fs = require('fs'), vm = require('vm'), assert = require('assert/strict'), path = require('path');
+const storeSource=fs.readFileSync(path.join(__dirname,'github-store.js'),'utf8');
+const appSource=fs.readFileSync(path.join(__dirname,'script.js'),'utf8');
+new vm.Script(storeSource);new vm.Script(appSource);
+let online={w:{'2026-10-15':70.2},f:[],ib:[],g:{name:'中文日記'}}, sha='v1', puts=0, failure=0;
+const calls=[];
+const mockFetch=async (url,opts)=>{
+ calls.push({url,opts});
+ if(failure) return {ok:false,status:failure};
+ if(opts.method==='GET') return {ok:true,json:async()=>({encoding:'base64',sha,content:Buffer.from(JSON.stringify(online)).toString('base64')})};
+ puts++;
+ const body=JSON.parse(opts.body);
+ if(body.sha!==sha)return {ok:false,status:409};
+ online=JSON.parse(Buffer.from(body.content,'base64').toString('utf8'));
+ sha='v'+(Number(sha.slice(1))+1);
+ return {ok:true,json:async()=>({content:{sha}})};
+};
+const nodes=new Map();
+const ctx=vm.createContext({console,fetch:mockFetch,TextEncoder,TextDecoder,Uint8Array,atob,btoa,
+ document:{querySelector:s=>{if(!nodes.has(s))nodes.set(s,{textContent:''});return nodes.get(s);}},
+ module:{exports:{}},confirm:()=>true});
+vm.runInContext(storeSource,ctx);
+const Store=ctx.module.exports;
+const config={owner:'rtyui01132001',repo:'fit',branch:'main',path:'data.json',token:'test-token'};
+(async()=>{
+ const first=new Store(config),second=new Store(config);
+ const data=await first.read();await second.read();
+ assert.equal(data.g.name,'中文日記');
+ data.w['2026-10-16']=69.8;await first.write(data);
+ assert.equal(first.sha,'v2');
+ assert.equal(online.w['2026-10-16'],69.8);
+ await assert.rejects(second.write(data),/其他變更/);
+ const prior=puts;await assert.rejects(second.write(data),/版本衝突/);assert.equal(puts,prior);
+ await second.read();await second.write(data);assert.equal(sha,'v3');
+ failure=401;await assert.rejects(first.read(),/權杖無效/);
+ failure=404;await assert.rejects(first.read(),/找不到/);failure=0;
+ assert.equal(calls[0].opts.headers.Authorization,'Bearer test-token');
+ assert.match(calls[0].url,/repos\/rtyui01132001\/fit\/contents\/data.json\?ref=main/);
+ vm.runInContext(appSource.slice(0,appSource.indexOf('const exportJsonFile')),ctx);
+ const run=code=>vm.runInContext(code,ctx);
+ ctx.testStore=new Store(config);await ctx.testStore.read();
+ run("store=testStore;readyToSave=true;S=emptyState();S.g.name='測試中文';");
+ run("S.w['2026-10-17']=69.5;save();S.w['2026-10-18']=69.3;save();");
+ assert.equal(await run('saveQueue'),true);
+ assert.equal(online.w['2026-10-18'],69.3);assert.equal(online.g.name,'測試中文');
+ assert.equal(run('dirty'),false);
+ failure=403;run('save()');assert.equal(await run('saveQueue'),false);assert.equal(run('dirty'),true);
+ assert.match(nodes.get('#storageStatus').textContent,/儲存失敗/);
+ assert.equal(appSource.includes('localStorage'),false);
+ console.log('PASS: syntax, Unicode round trip, two-device reads, sequential SHA updates, conflict blocking, authentication errors, queued latest edits, unsaved state after failure, no localStorage dependency');
+})().catch(e=>{console.error(e);process.exitCode=1;});

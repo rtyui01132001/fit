@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>小愛健康日記</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <main>
+    <header>
+      <h1 id="h1">小愛健康日記</h1>
+      <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="avg" style="width:auto">疊加
+        7 天平均線</label>
+    </header>
+
+    <p id="storageStatus" class="hint" role="status" aria-live="polite">請連線至 GitHub 讀取紀錄。</p>
+    <section class="card" id="cloudConnection">
+      <h2>GitHub 雲端資料</h2>
+      <p class="hint">不同裝置請使用相同儲存庫、分支和路徑。權杖僅留在此分頁記憶體，重新開啟需再輸入。</p>
+      <div class="row">
+        <label>擁有者<input id="cloudOwner" value="rtyui01132001" autocomplete="off"></label>
+        <label>資料儲存庫<input id="cloudRepo" value="fit" autocomplete="off"></label>
+        <label>分支<input id="cloudBranch" value="main" autocomplete="off"></label>
+        <label>JSON 路徑<input id="cloudPath" value="data.json" autocomplete="off"></label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label style="flex:1">GitHub 存取權杖<input id="cloudToken" type="password" autocomplete="off" placeholder="Fine-grained token · Contents: Read and write"></label>
+        <button id="cloudConnect" type="button" class="pri">連線／重新讀取</button>
+        <button id="cloudRetry" type="button" class="ghost">重試儲存</button>
+      </div>
+      <p class="hint">請先將原有 data.json 放到指定路徑。若它在專案子資料夾，路徑填 xiaoai-health-diary/data.json。公開儲存庫內的資料會公開；你也可以指定另一個私人資料儲存庫。</p>
+    </section>
+    <section class="card">
+      <div class="stats s5" id="stats"></div>
+      <div class="cw">
+        <div class="scroll">
+          <div id="chart"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card hb">
+      <div class="head">
+        <h2 id="th">當天</h2><span style="display:flex;gap:8px;flex-wrap:wrap"><select id="dt"
+            aria-label="日類型"></select><input type="date" id="day" aria-label="選擇日期"></span>
+      </div>
+      <div class="wrow">
+        <div class="cal" id="cal"></div>
+        <div class="wl">
+          <h2>📍體重</h2>
+          <form id="wf" class="row"><label style="flex:1 1 120px">早晨空腹體重 (kg)<input id="wv" type="number" step="0.1"
+                min="20" max="300" required></label><button class="pri" type="submit">加入</button><button class="ghost"
+              type="button" id="wdel">歸零</button></form>
+          <p class="hint" id="wh"></p>
+          <h2 style="margin-top:16px">💧水量</h2>
+          <div class="row" id="wbtns"><button class="ghost" type="button" data-w="100">+100</button><button
+              class="ghost" type="button" data-w="1000">+1000</button><label style="flex:1 1 80px"><input id="wi"
+                type="number" step="50" placeholder="自訂 ml"></label><button class="pri" type="button"
+              id="wadd">加入</button><button class="ghost" type="button" id="wzero">歸零</button></div>
+          <div class="tips" id="tips"></div>
+        </div>
+      </div>
+
+      <h2 style="margin-top:24px">今日熱量營養總覽</h2>
+      <div id="today"></div>
+      <div class="ob">
+        <div class="obl">
+          <div id="bars"></div>
+          <h2 style="margin-top:20px">🔥近期熱量</h2>
+          <div class="week" id="week"></div>
+          <div class="mc an" style="margin-top:18px">
+            <div class="mct">🔍 數據解析與調整建議</div>
+            <ul id="ana"></ul>
+          </div>
+        </div>
+        <div class="mc">
+          <div class="mct">🥗當日飲食</div>
+
+          <form id="ff">
+            <label>餐別<select id="fm">
+                <option value="b">早餐</option>
+                <option value="l">午餐</option>
+                <option value="s">點心 / 其他</option>
+                <option value="d">晚餐</option>
+              </select></label>
+            <label style="margin-top:8px">食物名稱<input id="fn" list="names" required autocomplete="off"
+                placeholder="例:雞胸便當"></label>
+            <datalist id="names"></datalist>
+            <div class="row" style="margin-top:8px">
+              <label>熱量 kcal<input id="fk" type="number" min="0" step="1"></label>
+              <label>蛋白質 g<input id="fp" type="number" min="0" step="0.1"></label>
+              <label>碳水 g<input id="fc" type="number" min="0" step="0.1"></label>
+              <label>脂肪 g<input id="ff2" type="number" min="0" step="0.1"></label>
+              <button class="pri" type="submit">加入飲食</button>
+            </div>
+            <p class="hint" id="est"></p>
+
+          </form>
+          <ul id="list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <details class="card hb" id="set">
+      <summary class="head">
+        <h2>設定</h2>
+      </summary>
+      <div class="sg">
+        <div class="sb" style="--c:var(--ln)">
+          <h3>基本</h3>
+          <div class="row r3"><label>日記名稱<input id="gn" type="text" placeholder="小愛健康日記"></label><label>目標體重 kg<input
+                id="gt" type="number" step="0.1"></label><label>里程碑間隔 kg<input id="gs" type="number" step="0.1"
+                min="0.1"></label></div>
+        </div>
+
+      </div>
+      <div class="sb" style="margin-top:14px">
+        <h3>每日目標</h3>
+        <div class="row r3"><label style="flex:0 1 180px">水量目標 ml<input id="gw" type="number" step="50"></label><label
+            style="flex:0 1 180px">碳水目標 g<input id="gc" type="number" step="1"></label><label
+            style="flex:0 1 180px">脂肪目標 g<input id="gf" type="number" step="1"></label></div>
+      </div>
+      <div class="sb" style="--c:var(--acc);margin-top:14px">
+        <h3>日類型目標</h3>
+        <div id="gtypes"></div>
+      </div>
+
+      <div class="sb" style="margin-top:14px">
+        <h3>總覽</h3>
+        <p class="hint">依選擇的日期自動整理成日記格式,可以複製貼到別的地方。</p>
+        <textarea id="dtx" readonly style="min-height:260px"></textarea>
+        <div class="row" style="margin-top:8px"><button class="pri" type="button" id="dcp">複製</button><span class="hint"
+            id="dres"></span></div>
+      </div>
+      <div class="sb" style="margin-top:14px">
+        <h3>InBody 檢測</h3>
+        <form id="bf" class="row">
+          <label>檢測日期<input type="date" id="bd" required></label>
+          <label>骨骼肌 kg<input id="bm" type="number" step="0.1" min="0" required></label>
+          <label>體脂率 %<input id="bfat" type="number" step="0.1" min="0" required></label>
+          <button class="pri" type="submit">新增檢測</button>
+        </form>
+        <ul id="bl" style="margin-top:12px"></ul>
+      </div>
+      <details style="margin-top:14px" open>
+        <summary>批量匯入</summary>
+        <p class="hint">一行一筆,可以直接從 Excel 或 Google 試算表複製貼上。日期可寫 2025-08-08 或 2025/8/8。同一天的體重或 InBody
+          會被覆蓋;飲食則是新增,重複匯入會重複出現。</p>
+        <div class="row"><label style="flex:0 1 200px">匯入類型<select id="bty">
+              <option value="w">體重(日期、體重)</option>
+              <option value="i">InBody(日期、骨骼肌、體脂率)</option>
+              <option value="f">飲食(日期、餐別可省略、名稱、熱量、蛋白質、碳水、脂肪)</option>
+            </select></label></div>
+        <textarea id="btx" spellcheck="false" style="margin-top:8px"
+          placeholder="2025-08-08 79.8&#10;2025-08-09 78.9"></textarea>
+        <div class="row" style="margin-top:8px"><button class="pri" type="button" id="bimp">匯入</button><span
+            class="hint" id="bres"></span></div>
+      </details>
+      <details style="margin-top:14px">
+        <summary>備份與還原</summary>
+        <p class="hint">連線後會直接讀寫 GitHub 儲存庫的 <strong>data.json</strong>。請等頂端顯示儲存成功再關閉；切換裝置前重新讀取。匯入備份會覆蓋線上資料，請謹慎使用。</p>
+        <textarea id="bk" spellcheck="false"></textarea>
+        <div class="row" style="margin-top:8px">
+          <button class="ghost" type="button" id="bkr">還原</button>
+          <button class="pri" type="button" id="jsonExport">匯出 JSON</button>
+          <label class="ghost" style="display:inline-flex;align-items:center;cursor:pointer;padding:5px 12px;border-radius:8px;border:1px solid var(--acc);color:var(--acc);">匯入 JSON <input id="jsonFile" type="file" accept=".json,application/json" hidden></label>
+          <span class="hint" id="jsonRes"></span>
+        </div>
+      </details>
+    </details>
+
+
+
+
+
+  </main>
+  <script src="github-store.js"></script>
+  <script src="script.js"></script>
+</body>
+
+</html>
