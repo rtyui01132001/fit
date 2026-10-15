@@ -69,7 +69,7 @@ const loadJsonState = async () => {
     $('#cloudToken').value = '';
     fillG(); setDay(day); renderAll();
     editLock(!readyToSave);
-    storageStatus(readyToSave ? '編輯模式：已讀取線上 data.json，修改後會自動儲存至 GitHub。' : '唯讀模式：已載入線上 data.json，可瀏覽日期與紀錄；輸入權杖後按「解鎖編輯／重新讀取」即可編輯。');
+    storageStatus(readyToSave ? '編輯模式：修改後可自動儲存至 GitHub。' : '唯讀模式：輸入權杖後按「解鎖編輯／重新讀取」即可編輯。');
   } catch (e) {
     storageStatus('連線失敗：' + e.message + '。資料未更新；請確認公開儲存庫與檔案路徑，或輸入權杖讀取私人資料。');
   } finally { $('#cloudConnect').disabled = false; }
