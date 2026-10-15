@@ -156,25 +156,26 @@
           <span class="hint" id="jsonRes"></span>
         </div>
       </details>
+      <details style="margin-top:14px" class="card" id="cloudConnection">
+        <h2>GitHub 雲端資料</h2>
+        <p class="hint">公開資料會自動載入，未輸入權杖時僅供瀏覽。輸入權杖並按「解鎖編輯／重新讀取」後即可修改與儲存。權杖僅留在此分頁記憶體。</p>
+        <div class="row">
+          <label>擁有者<input id="cloudOwner" value="rtyui01132001" autocomplete="off"></label>
+          <label>資料儲存庫<input id="cloudRepo" value="fit" autocomplete="off"></label>
+          <label>分支<input id="cloudBranch" value="main" autocomplete="off"></label>
+          <label>JSON 路徑<input id="cloudPath" value="data.json" autocomplete="off"></label>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <label style="flex:1">GitHub 存取權杖<input id="cloudToken" type="password" autocomplete="off"
+              placeholder="Fine-grained token · Contents: Read and write"></label>
+          <button id="cloudConnect" type="button" class="pri">解鎖編輯／重新讀取</button>
+          <button id="cloudRetry" type="button" class="ghost">儲存資料</button>
+        </div>
+        <p class="hint">請先將原有 data.json 放到指定路徑。若它在專案子資料夾，路徑填 xiaoai-health-diary/data.json。公開儲存庫內的資料會公開；你也可以指定另一個私人資料儲存庫。</p>
+      </details>
     </details>
 
-    <section class="card" id="cloudConnection">
-      <h2>GitHub 雲端資料</h2>
-      <p class="hint">公開資料會自動載入，未輸入權杖時僅供瀏覽。輸入權杖並按「解鎖編輯／重新讀取」後即可修改與儲存。權杖僅留在此分頁記憶體。</p>
-      <div class="row">
-        <label>擁有者<input id="cloudOwner" value="rtyui01132001" autocomplete="off"></label>
-        <label>資料儲存庫<input id="cloudRepo" value="fit" autocomplete="off"></label>
-        <label>分支<input id="cloudBranch" value="main" autocomplete="off"></label>
-        <label>JSON 路徑<input id="cloudPath" value="data.json" autocomplete="off"></label>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <label style="flex:1">GitHub 存取權杖<input id="cloudToken" type="password" autocomplete="off"
-            placeholder="Fine-grained token · Contents: Read and write"></label>
-        <button id="cloudConnect" type="button" class="pri">解鎖編輯／重新讀取</button>
-        <button id="cloudRetry" type="button" class="ghost">儲存資料</button>
-      </div>
-      <p class="hint">請先將原有 data.json 放到指定路徑。若它在專案子資料夾，路徑填 xiaoai-health-diary/data.json。公開儲存庫內的資料會公開；你也可以指定另一個私人資料儲存庫。</p>
-    </section>
+
 
 
 
