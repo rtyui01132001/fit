@@ -24,10 +24,15 @@ let store = null, readyToSave = false, saveQueue = Promise.resolve(), dirty = fa
 const storageStatus = text => { $('#storageStatus').textContent = text; };
 const editLock = locked => {
   document.querySelectorAll('main input, main select, main button, main textarea').forEach(el => {
-    if (!el.closest('#cloudConnection') && !['jsonExport','bk'].includes(el.id)) el.disabled = locked;
+    if (!el.closest('#cloudConnection')) {
+      const browsing = ['avg','day','dcp','jsonExport','dtx'].includes(el.id) || el.closest('#cal, #week');
+      el.disabled = locked && !browsing;
+    }
+    if (el.id === 'cloudRetry') el.disabled = locked;
   });
 };
 const save = () => {
+  if (!readyToSave || !store?.token) { storageStatus('唯讀模式：請輸入權杖並按「解鎖編輯／重新讀取」'); return Promise.resolve(false); }
   dirty = true;
   const version = ++revision, snapshot = JSON.parse(JSON.stringify(S));
   storageStatus('等待儲存至 GitHub…');
@@ -60,13 +65,13 @@ const loadJsonState = async () => {
     storageStatus('正在讀取 GitHub data.json…');
     const data = await candidate.read();
     hydrateState(data);
-    store = candidate; readyToSave = true; dirty = false;
+    store = candidate; readyToSave = Boolean(candidate.token); dirty = false;
     $('#cloudToken').value = '';
     fillG(); setDay(day); renderAll();
-    editLock(false);
-    storageStatus('已讀取線上 data.json；修改後會儲存至 GitHub。換裝置或回到此頁時，請按「連線／重新讀取」。');
+    editLock(!readyToSave);
+    storageStatus(readyToSave ? '編輯模式：已讀取線上 data.json，修改後會自動儲存至 GitHub。' : '唯讀模式：已載入線上 data.json，可瀏覽日期與紀錄；輸入權杖後按「解鎖編輯／重新讀取」即可編輯。');
   } catch (e) {
-    storageStatus('連線失敗：' + e.message + '。請檢查設定，線上原檔未修改。');
+    storageStatus('連線失敗：' + e.message + '。資料未更新；請確認公開儲存庫與檔案路徑，或輸入權杖讀取私人資料。');
   } finally { $('#cloudConnect').disabled = false; }
 };
 const exportJsonFile = () => {
@@ -231,7 +236,7 @@ function renderFood() {
   const ks = days.map(d => dayInfo(d).net), mx = Math.max(...Object.values(g.types).map(t => n0(t.hi)), ...ks, 1);
   $('#week').innerHTML = days.map((d, i) => `<button data-d="${d}" class="${d === day ? 'sel' : ''}" title="${d}"><span>${Math.round(ks[i]) || ''}</span><i style="height:${Math.max(2, Math.max(ks[i], 0) / mx * 80)}px"></i><span>${d.slice(8)}</span></button>`).join('');
   $('#names').innerHTML = [...new Set(S.f.map(x => x.name))].slice(-40).map(n => `<option value="${esc(n)}">`).join('');
-  $('#dtx').value = diaryText(I); renderCal();
+  $('#dtx').value = diaryText(I); renderCal(); editLock(!readyToSave);
 }
 function renderCal() {
   const [y, m] = cal.split('-').map(Number), dim = new Date(Date.UTC(y, m, 0)).getUTCDate(), lead = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
@@ -272,7 +277,7 @@ $('#dcp').addEventListener('click', () => {
   (navigator.clipboard ? navigator.clipboard.writeText(t.value) : Promise.reject()).then(() => m.textContent = '已複製', () => { try { m.textContent = document.execCommand('copy') ? '已複製' : '請手動複製選取的文字' } catch (e) { m.textContent = '請手動複製選取的文字' } })
 });
 function setDay(d) { day = d || tdy(); cal = day.slice(0, 7); $('#day').value = day; $('#bd').value = day; $('#wv').value = S.w[day] ?? ''; renderFood() }
-function renderAll() { renderWeight(); renderIB(); renderFood(); $('#bk').value = JSON.stringify(S) }
+function renderAll() { renderWeight(); renderIB(); renderFood(); $('#bk').value = JSON.stringify(S); editLock(!readyToSave) }
 function persist() { save(); renderAll(); }
 
 $('#avg').addEventListener('change', renderWeight);
@@ -321,11 +326,12 @@ $('#bimp').addEventListener('click', () => {
 });
 (() => {
   editLock(true);
-  storageStatus('請輸入 GitHub 權杖並連線，讀取共用的 data.json。');
+  storageStatus('正在載入線上 data.json（唯讀）…');
   fillG();
   setDay(day); renderAll();
   editLock(true);
   if (document.fonts) document.fonts.ready.then(fitIB);
+  loadJsonState();
 })();
 
 $('#cloudConnect').addEventListener('click', loadJsonState);

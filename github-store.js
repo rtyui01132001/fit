@@ -1,14 +1,15 @@
 class GitHubDiaryStore {
   constructor({owner, repo, branch, path, token}) {
-    if (!owner || !repo || !branch || !path || !token) throw new Error('請填寫完整連線設定');
+    if (!owner || !repo || !branch || !path) throw new Error('請填寫完整連線設定');
     if (!path.endsWith('.json') || path.split('/').some(p => !p || p === '.' || p === '..')) throw new Error('檔案路徑必須是有效的 JSON 路徑');
-    this.branch = branch; this.token = token; this.sha = null; this.blocked = false;
+    this.branch = branch; this.token = token || ''; this.sha = null; this.blocked = false;
     this.url = 'https://api.github.com/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repo) + '/contents/' + path.split('/').map(encodeURIComponent).join('/');
   }
   async request(method, body) {
+    if (method !== 'GET' && !this.token) throw new Error('唯讀模式：請先輸入 GitHub 權杖');
     if (this.retryAt && Date.now() < this.retryAt) throw new Error('GitHub 暫時限流，請於 ' + new Date(this.retryAt).toLocaleString('zh-TW') + ' 後再試');
     const res = await fetch(this.url + (method === 'GET' ? '?ref=' + encodeURIComponent(this.branch) : ''), {
-      method, cache: 'no-store', headers: {Accept:'application/vnd.github+json', Authorization:'Bearer ' + this.token,
+      method, cache: 'no-store', headers: {Accept:'application/vnd.github+json', ...(this.token ? {Authorization:'Bearer ' + this.token} : {}),
         'X-GitHub-Api-Version':'2026-03-10', ...(body ? {'Content-Type':'application/json'} : {})},
       ...(body ? {body:JSON.stringify(body)} : {})
     });
@@ -45,6 +46,7 @@ class GitHubDiaryStore {
     return data;
   }
   async write(data) {
+    if (!this.token) throw new Error('唯讀模式：請先輸入 GitHub 權杖');
     if (this.blocked) throw new Error('版本衝突：請先匯出備份，再重新讀取線上資料');
     if (!this.sha) throw new Error('請先讀取已存在的 data.json，確認路徑後再儲存');
     const bytes = new TextEncoder().encode(JSON.stringify(data,null,2)+'\n');
