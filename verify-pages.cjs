@@ -47,5 +47,13 @@ const config={owner:'rtyui01132001',repo:'fit',branch:'main',path:'data.json',to
  failure=403;run('save()');assert.equal(await run('saveQueue'),false);assert.equal(run('dirty'),true);
  assert.match(nodes.get('#storageStatus').textContent,/儲存失敗/);
  assert.equal(appSource.includes('localStorage'),false);
+ ctx.fetch=async()=>({ok:false,status:403,headers:{get:()=>null},json:async()=>({message:'Resource not accessible by personal access token'})});
+ await assert.rejects(new Store(config).read(),/Contents.*Read and write/);
+ let limitedCalls=0;
+ ctx.fetch=async()=>{limitedCalls++;return {ok:false,status:403,headers:{get:name=>name==='retry-after'?'60':null},json:async()=>({message:'You have exceeded a secondary rate limit'})};};
+ const limited=new Store(config);
+ await assert.rejects(limited.read(),/暫時限流/);
+ await assert.rejects(limited.read(),/暫時限流/);
+ assert.equal(limitedCalls,1);
  console.log('PASS: syntax, Unicode round trip, two-device reads, sequential SHA updates, conflict blocking, authentication errors, queued latest edits, unsaved state after failure, no localStorage dependency');
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -329,5 +329,10 @@ $('#bimp').addEventListener('click', () => {
 })();
 
 $('#cloudConnect').addEventListener('click', loadJsonState);
-$('#cloudRetry').addEventListener('click', () => { if (readyToSave) save(); });
+$('#cloudRetry').addEventListener('click', () => {
+  if (!readyToSave || !store) return;
+  const replacement = $('#cloudToken').value.trim();
+  if (replacement) { store.token = replacement; $('#cloudToken').value = ''; }
+  save();
+});
 window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });

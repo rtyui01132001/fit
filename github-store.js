@@ -6,6 +6,7 @@ class GitHubDiaryStore {
     this.url = 'https://api.github.com/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repo) + '/contents/' + path.split('/').map(encodeURIComponent).join('/');
   }
   async request(method, body) {
+    if (this.retryAt && Date.now() < this.retryAt) throw new Error('GitHub 暫時限流，請於 ' + new Date(this.retryAt).toLocaleString('zh-TW') + ' 後再試');
     const res = await fetch(this.url + (method === 'GET' ? '?ref=' + encodeURIComponent(this.branch) : ''), {
       method, cache: 'no-store', headers: {Accept:'application/vnd.github+json', Authorization:'Bearer ' + this.token,
         'X-GitHub-Api-Version':'2026-03-10', ...(body ? {'Content-Type':'application/json'} : {})},
@@ -14,7 +15,23 @@ class GitHubDiaryStore {
     if (!res.ok) {
       const messages = {401:'權杖無效或已過期',403:'沒有存取權限或 API 額度不足',404:'找不到儲存庫、分支或檔案，或權杖沒有權限',409:'線上檔案已有其他變更，請匯出備份後重新讀取',422:'GitHub 拒絕儲存，請檢查分支規則或稍後重試'};
       if (res.status === 409 || res.status === 422) this.blocked = true;
-      const error = new Error(messages[res.status] || 'GitHub 請求失敗：' + res.status);
+      let detail = '';
+      try { const payload = await res.json(); detail = typeof payload.message === 'string' ? payload.message : ''; } catch (_) {}
+      const header = name => res.headers?.get(name);
+      const remaining = header('x-ratelimit-remaining');
+      const retryAfter = header('retry-after');
+      const limited = res.status === 429 || ((res.status === 403) && (remaining === '0' || retryAfter != null || /rate limit|abuse/i.test(detail)));
+      let message = messages[res.status] || 'GitHub 請求失敗';
+      if (limited) {
+        const reset = Number(header('x-ratelimit-reset')) * 1000;
+        this.retryAt = retryAfter != null ? Date.now() + Number(retryAfter) * 1000 : remaining === '0' && reset > Date.now() ? reset : Date.now() + 60000;
+        message = 'GitHub API 暫時限流，請於 ' + new Date(this.retryAt).toLocaleString('zh-TW') + ' 後重試';
+      } else if (res.status === 403 && /resource not accessible/i.test(detail)) {
+        message = '權杖沒有此檔案的寫入權限：請確認已選取資料儲存庫，且 Contents 設為 Read and write';
+      } else if (res.status === 403) {
+        message = 'GitHub 拒絕存取：請檢查權杖權限、帳號權限或分支規則';
+      }
+      const error = new Error('HTTP ' + res.status + ' · ' + message + (detail ? '（GitHub：' + detail + '）' : ''));
       error.status = res.status; throw error;
     }
     return res.json();
